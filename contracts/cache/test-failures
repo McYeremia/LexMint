@@ -1,1 +1,1 @@
-invariant_unregisteredHashReturnsFalse
+invariant_statusProgressionIsMonotonic|invariant_vaultGetsAllPayments

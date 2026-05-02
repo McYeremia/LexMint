@@ -500,10 +500,10 @@ This must work on mobile, work without MetaMask, and respond in under 3 seconds.
 ## Current Status
 
 - [ ] Phase 1: Smart Contracts
-  - [ ] IPRegistry.sol + tests
-  - [ ] LicenseManager.sol + tests
-  - [ ] RoyaltyVault.sol + tests
-  - [ ] DisputeArbitrator.sol + tests
+  - [x] IPRegistry.sol + tests
+  - [x] LicenseManager.sol + tests
+  - [x] RoyaltyVault.sol + tests
+  - [x] DisputeArbitrator.sol + tests
   - [ ] Deploy.s.sol
   - [ ] Deployed to Sepolia
 - [ ] Phase 2: Backend

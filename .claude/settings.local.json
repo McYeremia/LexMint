@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /home/yeremia/LexMint log --oneline -5)",
+      "Bash(forge build *)",
+      "Bash(forge test *)"
+    ]
+  }
+}

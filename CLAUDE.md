@@ -13,6 +13,7 @@ and receive royalties automatically via smart contracts. There is no admin, no m
 everything is enforced by code.
 
 The project has three layers that must be built in this order:
+
 1. Smart contracts (Foundry) → 2. Backend (Node.js) → 3. Frontend (Next.js)
 
 ---
@@ -104,6 +105,7 @@ lexmint/
 ### Phase 1: Smart Contracts
 
 **Step 1.1 — Initialize Foundry**
+
 ```bash
 mkdir contracts && cd contracts
 forge init --no-git
@@ -111,6 +113,7 @@ forge install OpenZeppelin/openzeppelin-contracts --no-git
 ```
 
 Update `foundry.toml`:
+
 ```toml
 [profile.default]
 src = "src"
@@ -125,6 +128,7 @@ remappings = ["@openzeppelin/=lib/openzeppelin-contracts/"]
 **Step 1.2 — Write contracts in this order**
 
 Build each contract fully before moving to the next:
+
 1. `IPRegistry.sol` — no dependencies on other LexMint contracts
 2. `LicenseManager.sol` — imports IPRegistry interface
 3. `RoyaltyVault.sol` — imports IPRegistry interface
@@ -133,11 +137,13 @@ Build each contract fully before moving to the next:
 **Step 1.3 — Write tests alongside each contract**
 
 Every contract must have a corresponding `.t.sol` file with:
+
 - Unit tests for every public function (happy path + revert cases)
 - At least 2 fuzz test functions using `forge-std`
 - At least 1 invariant test
 
 Run after each contract:
+
 ```bash
 forge test --match-contract <ContractName>Test -vvv
 forge coverage
@@ -156,6 +162,7 @@ to `frontend/src/lib/abis/` and update addresses in `frontend/src/lib/contracts.
 ### Phase 2: Backend
 
 **Step 2.1 — Initialize**
+
 ```bash
 cd ../backend
 npm init -y
@@ -168,6 +175,7 @@ npx prisma init
 **Step 2.2 — Prisma schema**
 
 Define these models in `prisma/schema.prisma`:
+
 - `Work` — mirrors on-chain WorkRecord (hash, owner, title, ipfsCid, registeredAt, txHash)
 - `License` — (workId, licensee, scope, expiresAt, txHash, isActive)
 - `RoyaltyEvent` — (workId, from, amount, txHash, timestamp)
@@ -176,6 +184,7 @@ Define these models in `prisma/schema.prisma`:
 **Step 2.3 — Event indexer**
 
 `src/indexer/events.ts` must:
+
 - Connect to Sepolia via `ethers.JsonRpcProvider`
 - Listen to events from all four contracts
 - On `WorkRegistered` → upsert `Work` in DB
@@ -197,10 +206,12 @@ POST /metadata                 → upload metadata to IPFS via Pinata
 ```
 
 **Step 2.5 — Run backend**
+
 ```bash
 npx prisma migrate dev --name init
 npm run dev
 ```
+
 Backend must run on port 4000.
 
 ---
@@ -208,6 +219,7 @@ Backend must run on port 4000.
 ### Phase 3: Frontend
 
 **Step 3.1 — Initialize Next.js**
+
 ```bash
 cd ../frontend
 npx create-next-app@latest . \
@@ -220,14 +232,16 @@ npx create-next-app@latest . \
 ```
 
 When prompted, answer exactly:
+
 - TypeScript → Yes
 - ESLint → Yes
 - Tailwind CSS → Yes
 - App Router → Yes
 - src/ directory → Yes
-- import alias → No (keep default @/*)
+- import alias → No (keep default @/\*)
 
 **Step 3.2 — Install Web3 dependencies**
+
 ```bash
 npm install wagmi viem @rainbow-me/rainbowkit @tanstack/react-query
 ```
@@ -235,12 +249,14 @@ npm install wagmi viem @rainbow-me/rainbowkit @tanstack/react-query
 **Step 3.3 — Web3Provider setup**
 
 `src/providers/Web3Provider.tsx` must:
+
 - Configure wagmi with Sepolia chain only
 - Use RainbowKit for wallet connection UI
 - Wrap with TanStack Query's QueryClientProvider
 - Export a `Web3Provider` component that wraps all three
 
 `src/app/layout.tsx` must:
+
 - Be a Server Component
 - Import and use `Web3Provider`
 - Note: `'use client'` goes in Web3Provider, NOT in layout.tsx
@@ -251,21 +267,22 @@ Each hook in `src/hooks/` must use wagmi's `useReadContract` / `useWriteContract
 Never call ethers.js directly in frontend — use wagmi + viem only.
 
 Example pattern for `useIPRegistry.ts`:
+
 ```typescript
-import { useWriteContract, useReadContract } from 'wagmi'
-import { IP_REGISTRY_ABI, IP_REGISTRY_ADDRESS } from '@/lib/contracts'
+import { useWriteContract, useReadContract } from "wagmi";
+import { IP_REGISTRY_ABI, IP_REGISTRY_ADDRESS } from "@/lib/contracts";
 
 export function useRegisterWork() {
-  return useWriteContract()
+  return useWriteContract();
 }
 
 export function useVerifyWork(fileHash: `0x${string}`) {
   return useReadContract({
     address: IP_REGISTRY_ADDRESS,
     abi: IP_REGISTRY_ABI,
-    functionName: 'verifyWork',
+    functionName: "verifyWork",
     args: [fileHash],
-  })
+  });
 }
 ```
 
@@ -325,6 +342,7 @@ function getWorksByOwner(address owner) external view returns (bytes32[] memory)
 ```
 
 Reverts:
+
 - `AlreadyRegistered()` — if `works[fileHash].exists == true`
 - `NotOwner()` — if caller is not `works[fileHash].owner`
 - `InvalidSplit()` — if splits don't sum to 10000
@@ -362,6 +380,7 @@ function getLicensesByLicensee(address licensee) external view returns (uint256[
 ```
 
 Reverts:
+
 - `WorkNotRegistered()` — if IPRegistry.verifyWork returns empty
 - `NotWorkOwner()` — if caller doesn't own the work
 - `InsufficientPayment()` — if `msg.value < tier.priceWei`
@@ -382,6 +401,7 @@ function getAccrued(bytes32 workHash, address owner) external view returns (uint
 ```
 
 Notes:
+
 - `depositRoyalty` reads co-owner splits from `IPRegistry` and splits `msg.value` proportionally
 - `claimRoyalty` sends `accrued[workHash][msg.sender]` to caller and zeroes the balance
 - Must import `ReentrancyGuard` from OpenZeppelin
@@ -423,6 +443,7 @@ function executeResolution(uint256 disputeId) external;
 ## Coding Standards
 
 ### Solidity
+
 - Solidity version: `^0.8.24` on all files
 - All errors use custom errors, not `require(condition, "string")`
 - All state-changing functions emit events
@@ -431,12 +452,14 @@ function executeResolution(uint256 disputeId) external;
 - Follow checks-effects-interactions pattern strictly
 
 ### TypeScript (backend + frontend)
+
 - No `any` types — ever
 - Use `zod` for runtime validation on all API inputs
 - All async functions must have try/catch or proper error propagation
 - Prefer named exports over default exports (except Next.js pages/layouts)
 
 ### Git commits (for GitHub portfolio)
+
 - One commit per major feature: "feat: add IPRegistry.sol with unit tests"
 - Always commit passing tests, never broken code
 - Keep `forge coverage` output in a `coverage/` folder and link from README
@@ -462,6 +485,7 @@ It requires NO wallet connection and demonstrates the core value proposition:
 "Upload any file and instantly know if it is registered on-chain."
 
 Flow:
+
 1. User drops a file onto the dropzone
 2. Frontend hashes file bytes using `window.crypto.subtle.digest('SHA-256', fileBuffer)`
 3. Convert hash to `bytes32` hex string
@@ -495,3 +519,5 @@ This must work on mobile, work without MetaMask, and respond in under 3 seconds.
   - [ ] Royalty tracker
 
 Update this checklist as tasks are completed.
+
+Either Claude Code or Gemini CLI has done a tasks, please update the checklist. So Claude Code or Gemini CLI should update the checklist on CLAUDE.md and GEMINI.md.
